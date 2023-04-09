@@ -20,14 +20,12 @@ import {
 } from '@/store/cartModalState.js';
 import { darkFilterState } from '@/store/darkFilterState.js';
 import { getPriceFormat } from '@/utils';
-import TotalPrice from './TotalPrice';
-import { Button } from '../Button/Button';
-import { useRecoilState, useSetRecoilState, useRecoilValue } from 'recoil';
-import { useId } from 'react';
-import { countState } from '@/store/CounterState.js';
-import { useEffect } from 'react';
-import EarnPointsMark from './EarnPointsMark';
-import { saveCartData } from '../../utils';
+import {
+  countState,
+  countMinusBtnRefState,
+  countPlusBtnRefState,
+} from '@/store/CounterState.js';
+import { cartPopupInfoState, cartPopupState } from '../../store/Popup';
 
 function CartModal() {
   const productId = useRecoilValue(selectedproductId);
@@ -35,6 +33,25 @@ function CartModal() {
   const setIsVisible = useSetRecoilState(productCartModalState);
   const setDarkFilter = useSetRecoilState(darkFilterState);
   const [cartData, setCartData] = useRecoilState(cartDataState);
+  const closeBtnRef = useRef();
+  const containBtnRef = useRef([]);
+  const countMinusBtnRef = useRecoilValue(countMinusBtnRefState);
+  const countPlusBtnRef = useRecoilValue(countPlusBtnRefState);
+  const modalBtn = useRecoilValue(modalBtnState);
+  const modalRef = useRef();
+  const setCartPopupInfo = useSetRecoilState(cartPopupInfoState);
+  const cartPopup = useSetRecoilState(cartPopupState);
+
+  // Counter 초기화
+  useEffect(() => {
+    console.log('useEffect1');
+    setCount({
+      [product.id]: 1,
+    });
+    modalRef.current.ariaHidden = false;
+    modalRef.current.ariaModal = true;
+    closeBtnRef.current.focus();
+  }, []);
 
   const [count, setCount] = useRecoilState(countState);
 
@@ -50,15 +67,46 @@ function CartModal() {
     saveCartData(product.id, count[product.id], cartData, setCartData);
     setIsVisible(false);
     setDarkFilter(false);
-    console.log('cartData', cartData);
+    setCartPopupInfo({
+      desc: `${product.name}이 담겼습니다`,
+      img: product.image.thumbnail,
+    });
+    cartPopup(true);
+
+    modalBtn.focus();
   };
 
-  // Counter 초기화
-  useEffect(() => {
-    setCount({
-      [product.id]: 1,
-    });
-  }, []);
+  const handleModalKeyEvent = (e) => {
+    const focusableElements = [
+      countMinusBtnRef,
+      countPlusBtnRef,
+      closeBtnRef.current,
+      containBtnRef.current,
+    ];
+    const firstFocusableElement = focusableElements[0];
+    const lastFocusableElement =
+      focusableElements[focusableElements.length - 1];
+    const isTabPressed = e.key === 'Tab';
+    const isShiftPressed = e.shiftKey;
+
+    console.log(e.key);
+    if (!isTabPressed) {
+      return;
+    }
+    if (isShiftPressed) {
+      if (document.activeElement === firstFocusableElement) {
+        lastFocusableElement.focus();
+        e.preventDefault();
+      }
+    } else {
+      console.log('lastFocusableElement: ', lastFocusableElement);
+      console.log('document.activeElement: ', document.activeElement);
+      if (document.activeElement === lastFocusableElement) {
+        firstFocusableElement.focus();
+        e.preventDefault();
+      }
+    }
+  };
 
   return (
     <div
